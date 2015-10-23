@@ -1,0 +1,745 @@
+
+<!DOCTYPE HTML SYSTEM>
+
+<html>
+<head>
+
+    <meta charset="UTF-8">
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js" type="text/javascript"></script>
+    <script src="http://www.google.com/jsapi" type="text/javascript"></script>
+    <script type="text/javascript">
+        google.load('visualization', '1', {
+            packages: ['table']
+        });
+        
+
+        var searchTerm = '';
+        var searchIssues = '';
+        var searchYear = '';
+        var searchInterest = '';
+        var searchOrg = '';
+
+    //create the tabs which will contain the search results
+        $(document).ready(function() {
+
+            $('ul.tabs li').click(function() {
+                var tab_id = $(this).attr('data-tab');
+
+                $('ul.tabs li').removeClass('current');
+                $('.tab-content').removeClass('current');
+
+                $(this).addClass('current');
+                $("#" + tab_id).addClass('current');
+                $('body').scrollTo(this);
+
+            })
+
+        })
+    //function to allow scrolling to results (helpful when browsers aren't big enough to see the results at the bottom
+        $.fn.scrollTo = function(target, options, callback) {
+            if (typeof options == 'function' && arguments.length == 2) {
+                callback = options;
+                options = target;
+            }
+            var settings = $.extend({
+                scrollTarget: target,
+                offsetTop: 50,
+                duration: 500,
+                easing: 'swing'
+            }, options);
+            return this.each(function() {
+                var scrollPane = $(this);
+                var scrollTarget = (typeof settings.scrollTarget == "number") ? settings.scrollTarget : $(settings.scrollTarget);
+                var scrollY = (typeof scrollTarget == "number") ? scrollTarget : scrollTarget.offset().top + scrollPane.scrollTop() - parseInt(settings.offsetTop);
+                scrollPane.animate({
+                    scrollTop: scrollY
+                }, parseInt(settings.duration), settings.easing, function() {
+                    if (typeof callback == 'function') {
+                        callback.call(this);
+                    }
+                });
+            });
+        }
+    //takes value of each radio button checked and passes them into global variables before calling the DrawVisualization functions
+    //if user uses the search boxes, always clears the search values and passes this term into the DrawVisualization
+        $(function() {
+            $('#submitQuery').click(function(e) {
+                $("#Course").empty();
+                $("#Peer").empty();
+                $("#Experience").empty();
+                $("#Staff").empty();
+                $('#searchOrgBlank').val('');
+                $('#searchKeyBlank').val('');
+                
+
+                searchTerm = '';
+                searchOrg = '';
+
+                var checkIssues = $('input[name=checkIssues]:checked');
+                $(checkIssues).each(function() {
+                    searchIssues = $(this).val();
+                });
+                var checkYear = $('input[name=checkYear]:checked');
+
+                $(checkYear).each(function() {
+                    searchYear = $(this).val();
+                });
+                var checkInterest = $('input[name=checkInterest]:checked');
+
+                $(checkInterest).each(function() {
+                    searchInterest = $(this).val();
+                });
+
+
+                $("#log1").html(searchIssues + searchYear + searchInterest + searchTerm);
+                drawVisualizationExperience();
+                drawVisualizationPeer();
+                drawVisualizationCourse();
+                drawVisualizationStaff();
+                $('body').scrollTo('#Peer');
+
+
+                return false;
+            });
+            
+             $('#searchKey').click(function(e) {
+                $(':radio').each(function() {
+                    $(this).removeAttr('checked');
+                })
+                $('#searchOrgBlank').val('');
+
+                searchIssues = '';
+                searchYear = '';
+                searchInterest = '';
+
+                searchTerm = $('#searchKeyBlank').val();
+                $("#log").html(searchTerm);
+
+                searchOrg = '';
+
+
+                $("#Course").empty();
+                $("#Peer").empty();
+                $("#Experience").empty();
+                $("#Staff").empty();
+
+                drawVisualizationExperience();
+                drawVisualizationPeer();
+                drawVisualizationCourse();
+                drawVisualizationStaff();
+                $('body').scrollTo('#Peer');
+                return false;
+            });
+
+            $('#searchOrg').click(function(e) {
+                $(':radio').each(function() {
+                    $(this).removeAttr('checked');
+                })
+                $('#searchKeyBlank').val('');
+
+                searchOrg = $('#searchOrgBlank').val();
+                searchTerm = '';
+                searchIssues = '';
+                searchYear = '';
+                searchInterest = '';
+
+
+                $("#Course").empty();
+                $("#Peer").empty();
+                $("#Experience").empty();
+                $("#Staff").empty();
+
+                drawVisualizationExperience();
+                drawVisualizationPeer();
+                drawVisualizationCourse();
+                drawVisualizationStaff();
+                $('body').scrollTo('#Peer');
+
+
+                return false;
+
+            });
+
+           
+        });
+  
+        //these four functions use the Google Visualization library and queries the google spreadsheet
+        //depending on whether the user is searching an organization, a term or is using radio buttons, it returns a different set of rows from the spreadsheet
+        //this was used to make it simple for staff members to populate a database without using any code
+        //this section could probably have been optimized but it functions how it needs to
+         
+        function drawVisualizationCourse() {
+            var query = new google.visualization.Query(
+                'https://docs.google.com/spreadsheets/d/1kevGESnCmeI0cpJCq6z461jMOm_PbxVzBNL20DFfyCY/edit?usp=sharing');
+            if (searchOrg != '') {
+                query.setQuery('SELECT A, B, C, D, E, F, G, I, L   where (upper(A) like upper("Course")) and (upper(H) like upper("%' + searchOrg + '%")) ');
+            } else if (searchTerm != '') {
+                query.setQuery('SELECT A, B, C, D, E, F, G, I, L  where (upper(A) like upper("Course")) and (upper (B) like upper("%' + searchTerm + '%") OR upper(C) like upper("%' + searchTerm + '%") OR upper(D) like upper("%' + searchTerm + '%")) ');
+            } else {
+                query.setQuery('SELECT A, B, C, D, E, F, G, I, L  where (upper(A) like upper("Course")) and (upper(D) like upper("%' + searchIssues + '%") OR upper (C) like upper("%' + searchIssues + '%") ) and (upper(E) like upper("%' + searchInterest + '%")) and (upper(F) like upper("%' + searchYear + '%") ) ');
+            }
+            query.send(handleQueryResponse);
+
+        }
+
+        function drawVisualizationPeer() {
+            var query = new google.visualization.Query(
+                'https://docs.google.com/spreadsheets/d/1kevGESnCmeI0cpJCq6z461jMOm_PbxVzBNL20DFfyCY/edit?usp=sharing');
+            if (searchOrg != '') {
+                query.setQuery('SELECT A, B, C, D, E, F, G, H, I, J, K   where (upper(A) like upper("Peer")) and (upper(H) like upper("%' + searchOrg + '%")) ');
+            } else if (searchTerm != '') {
+                query.setQuery('SELECT A, B, C, D, E, F, G, H, I, J, K   where (upper(A) like upper("Peer")) and (upper (B) like upper("%' + searchTerm + '%") OR upper(C) like upper("%' + searchTerm + '%") OR upper(D) like upper("%' + searchTerm + '%")) ');
+            } else {
+                query.setQuery('SELECT A, B, C, D, E, F, G, H, I, J, K  where (upper(A) like upper("Peer")) and (upper(D) like upper("%' + searchIssues + '%")) and (upper(E) like upper("%' + searchInterest + '%")) and (upper(F) like upper("%' + searchYear + '%") )  ');
+            }
+            query.send(handleQueryResponse);
+
+        }
+
+        function drawVisualizationExperience() {
+            var query = new google.visualization.Query(
+                'https://docs.google.com/spreadsheets/d/1kevGESnCmeI0cpJCq6z461jMOm_PbxVzBNL20DFfyCY/edit?usp=sharing');
+            if (searchOrg != '') {
+                query.setQuery('SELECT A, B, C, D, E, F, G, I, L, N   where (upper(A) like upper("Experience")) and (upper(H) like upper("%' + searchOrg + '%")) and (upper(N) like upper("No") or upper(N) like upper("")) ');
+            } else if (searchTerm != '') {
+                query.setQuery('SELECT A, B, C, D, E, F, G, I, L, N   where (upper(A) like upper("Experience")) and (upper (B) like upper("%' + searchTerm + '%") OR upper(C) like upper("%' + searchTerm + '%") OR upper(D) like upper("%' + searchTerm + '%")) and (upper(N) like upper("No") or upper(N) like upper("")) ');
+            } else if (searchIssues == '' || searchInterest == ''){
+                query.setQuery('SELECT A, B, C, D, E, F, G, I, L, N  where (upper(A) like upper("Experience")) and (upper(D) like upper("%' + searchIssues + '%")) and (upper(E) like upper("%' + searchInterest + '%")) and (upper(F) like upper("%' + searchYear + '%") ) and (upper(N) like upper("Yes") or upper(N) like upper("")) ');            
+            }
+            else {
+                query.setQuery('SELECT A, B, C, D, E, F, G, I, L, N  where (upper(A) like upper("Experience")) and (upper(D) like upper("%' + searchIssues + '%")) and (upper(E) like upper("%' + searchInterest + '%")) and (upper(F) like upper("%' + searchYear + '%") ) and (upper(N) like upper("No") or upper(N) like upper("")) ');
+            }
+            query.send(handleQueryResponse);
+
+        }
+
+        function drawVisualizationStaff() {
+            var query = new google.visualization.Query(
+                'https://docs.google.com/spreadsheets/d/1kevGESnCmeI0cpJCq6z461jMOm_PbxVzBNL20DFfyCY/edit?usp=sharing');
+            if (searchOrg != '') {
+                query.setQuery('SELECT A, B, C, D, E, F, H, I, J, K   where (upper(A) like upper("Staff")) and (upper(H) like upper("%' + searchOrg + '%")) ');
+            } else if (searchTerm != '') {
+                query.setQuery('SELECT A, B, C, D, E, F, H, I, J, K   where (upper(A) like upper("Staff")) and (upper (B) like upper("%' + searchTerm + '%") OR upper(C) like upper("%' + searchTerm + '%") OR upper(D) like upper("%' + searchTerm + '%")) ');
+            } else {
+                query.setQuery('SELECT A, B, C, D, E, F, H, I, J, K  where (upper(A) like upper("Staff")) and (upper(D) like upper("%' + searchIssues + '%")) and (upper(E) like upper("%' + searchInterest + '%")) and (upper(F) like upper("%' + searchYear + '%") )  ');
+            }
+            query.send(handleQueryResponse);
+
+        }
+        
+        //all queries are passed into this function
+        //we identify the type of resource it is (peer, course, staff, etc.)
+        //we then display various columns, link to other columns, etc., depending on what kind of resource it is (e.g. we would not display the e-mail column of a course)
+        function handleQueryResponse(response) {
+            if (response.isError()) {
+                alert('Error in query: ' + response.getMessage() + ' ' + response.getDetailedMessage());
+                return;
+            }
+
+
+            var data = response.getDataTable();
+            var view = new google.visualization.DataView(data);
+
+            var numberRows = view.getNumberOfRows();
+
+            var id = view.getValue(0, 0);
+
+            switch (id) {
+
+                case "Peer":
+
+                    var table = document.createElement("TABLE");
+                    var columnCount = view.getNumberOfColumns();
+                    
+                    row = table.insertRow(-1);
+                    var cell = row.insertCell(-1);
+                    cell.innerHTML = '<h4 bgcolor="gray">Name</h4>';
+                    var cell = row.insertCell(-1);
+                    cell.innerHTML = '<h4 bgcolor="gray">Interest Areas</h4>';
+                    var cell = row.insertCell(-1);
+                    cell.innerHTML = '<h4 bgcolor="gray">Year</h4>';
+                    var cell = row.insertCell(-1);
+                    cell.innerHTML = '<h4 bgcolor="gray">Companies</h4>';
+                    var cell = row.insertCell(-1);
+                    cell.innerHTML = '';
+                    var cell = row.insertCell(-1);
+                    cell.innerHTML = '<h4 bgcolor="gray">E-mail</h4>';
+
+                    for (var i = 0; i < numberRows; i++) {
+                        row = table.insertRow(-1);
+
+                        //the j variable here corresponds to the column. this means that columns 3, 4, 8, 5, 9 will be skipped (not displayed)
+                        for (var j = 1; j < columnCount; j++) {
+                            if (j == 3 || j == 4 || j == 8 || j == 5) {
+                                continue;
+                            } else if (j == 1) {
+                                var cell = row.insertCell(-1);
+                                cell.innerHTML = '<a href="' + view.getValue(i, 8) + '" target="_blank">' + view.getValue(i, 1) + '</a>';
+                            } else if (j == 9) {
+                                var cell = row.insertCell(-1);
+                                cell.innerHTML = '<img src="' + view.getValue(i, 9) + '" width="100px" border="0" target="_blank">';
+                            } else {
+                                var cell = row.insertCell(-1);
+                                cell.innerHTML = view.getValue(i, j);
+                            }
+                        }
+                    }
+
+                    var dvTable = document.getElementById(id);
+                    dvTable.innerHTML = "";
+                    dvTable.appendChild(table);
+                    break;
+
+                case "Staff":
+
+                    var table = document.createElement("TABLE");
+                    var columnCountStaff = view.getNumberOfColumns();
+
+
+                    for (var i = 0; i < numberRows; i++) {
+                        row = table.insertRow(-1);
+
+                        for (var j = 1; j < columnCountStaff; j++) {
+                            if (j == 4 || j == 3 || j == 5) {
+                                continue;
+                            } else if (j == 7) {
+                                var cell = row.insertCell(-1);
+                                cell.innerHTML = '<a href="' + view.getValue(i, j) + '"><img src="' + view.getValue(i, 8) + '" alt="LinkedIn" width="100px" border="0" target="_blank"></a>';
+                                j++;
+                            } else if (j == 9) {
+                                var cell = row.insertCell(-1);
+                                cell.innerHTML = '<a href="' + view.getValue(i, 9) + '" target="_blank" ">Book Me!</a>';
+                            } else {
+                                var cell = row.insertCell(-1);
+                                cell.innerHTML = view.getValue(i, j);
+                            }
+                        }
+                    }
+
+                    var dvTable = document.getElementById(id);
+                    dvTable.innerHTML = "";
+                    dvTable.appendChild(table);
+                    break;
+
+                case "Course":
+                    var table = document.createElement("TABLE");
+                    var columnCount = view.getNumberOfColumns();
+                    
+                    row = table.insertRow(-1);
+                    var cell = row.insertCell(-1);
+                    cell.innerHTML = '<h4 bgcolor="gray">Course Name</h4>';
+                    var cell = row.insertCell(-1);
+                    cell.innerHTML = '<h4 bgcolor="gray">Description</h4>';
+                    var cell = row.insertCell(-1);
+                    cell.innerHTML = '<h4 bgcolor="gray">Quarter</h4>';
+
+                    for (var i = 0; i < numberRows; i++) {
+                        row = table.insertRow(-1);
+
+
+                        var cell = row.insertCell(-1);
+                        cell.innerHTML = '<a href="' + view.getValue(i, 7) + '" target="_blank" ">' + view.getValue(i, 1) + '</a>';
+                        var cell = row.insertCell(-1);
+                        cell.innerHTML = view.getValue(i, 2);
+                        var cell = row.insertCell(-1);
+                        cell.innerHTML = view.getValue(i, 8);
+
+
+                    }
+
+                    var dvTable = document.getElementById(id);
+                    dvTable.innerHTML = "";
+                    dvTable.appendChild(table);
+                    break;
+
+                case "Experience":
+
+                    var table = document.createElement("TABLE");
+                    var columnCount = view.getNumberOfColumns();
+                    
+                    row = table.insertRow(-1);
+                    var cell = row.insertCell(-1);
+                    cell.innerHTML = '<h4 bgcolor="gray">Name</h4>';
+                    var cell = row.insertCell(-1);
+                    cell.innerHTML = '<h4 bgcolor="gray">Description</h4>';
+                    var cell = row.insertCell(-1);
+                    cell.innerHTML = '<h4 bgcolor="gray">Timing</h4>';
+
+
+
+                    for (var i = 0; i < numberRows; i++) {
+                        row = table.insertRow(-1);
+
+                        var cell = row.insertCell(-1);
+                        cell.innerHTML = '<a href="' + view.getValue(i, 7) + '" target="_blank">' + view.getValue(i, 1) + '</a>';
+                        var cell = row.insertCell(-1);
+                        cell.innerHTML = view.getValue(i, 2);
+                        var cell = row.insertCell(-1);
+                        cell.innerHTML = view.getValue(i, 8);
+                    }
+
+                    var dvTable = document.getElementById(id);
+                    dvTable.innerHTML = "";
+                    dvTable.appendChild(table);
+                    break;
+
+                default:
+                    visualization = new google.visualization.Table(document.getElementById(view.getValue(0, 0)));
+                    visualization.draw(view, {
+                        allowHtml: true,
+                        legend: 'bottom'
+                    });
+
+
+            }
+
+        }
+    </script>
+
+
+</head>
+
+<!--the html formats the page and populates it with dynamic results from the javascript-->
+<body>
+
+    <div style="width:80%; color:#000; margin:auto; text-align:center;">
+        <br>
+        <img src="http://csi.gsb.stanford.edu/sites/csi.gsb.stanford.edu/themes/custom/gsb-csi-quickstrike/images/gsbhomelogo-small.png" style="float: left">
+        <h1 style="float: left">Center for<br>Social Innovation</h1>
+        <h2 style="float: right; padding:10px; vertical-align:bottom"> Social Innovation Resources Database</h2>
+    </div>
+    <hr style="height:50pt; visibility:hidden;">
+    <div class="container" align="center">
+        <div align="center" style="width:60%">
+            <h3> Find people, experiences, and courses to meet your social innovation interests.<br> <a href="https://stanfordcenterforsocialinnovation.youcanbook.me/" target="_blank"> Meet </a> with a CSI coach to create your personalized social innovation roadmap. </h3>
+        </div>
+        <hr style="height:2pt; visibility:hidden;">
+
+        <table style="width:100%;font-family:Arial, sans-serif;font-size:14px;padding:10px 0px;border-style:solid;border-width:5px;border-color:#A32924;border-collapse:separate;background-color: white;">
+            <tr>
+                <td style="width:25%;font-size:18px; padding: 5px;vertical-align:top" align=right>What are you interested in?</td>
+                <td>
+                    <div class="radio-toolbar" align=left>
+                        <input type="radio" value="health" id="health" name="checkIssues" >
+                        <label for="health" class="radio">Health</label>
+
+                        <input type="radio" value="education" id="education" name="checkIssues" >
+                        <label for="education" class="radio">Education & Youth Development</label>
+
+                        <input type="radio" value="energy" id="energy" name="checkIssues" >
+                        <label for="energy" class="radio">Energy & Environment</label>
+
+                        <input type="radio" value="government" id="government" name="checkIssues" >
+                        <label for="government" class="radio">Policy & Government</label>
+
+                        <input type="radio" value="agriculture" id="agriculture" name="checkIssues" >
+                        <label for="agriculture" class="radio">Food & Agriculture</label>
+
+                        <input type="radio" value="poverty" id="poverty" name="checkIssues" >
+                        <label for="poverty" class="radio">Economic Opportunity</label>
+
+                        <input type="radio" value="fine arts" id="fine arts" name="checkIssues" >
+                        <label for="fine arts" class="radio">Arts & Culture</label>
+
+                        <br>
+
+                        <input type="radio" value="Responsible" id="Responsible" name="checkIssues" >
+                        <label for="Responsible" class="radio">Responsible Business</label>
+
+                        <input type="radio" value="philanthropy" id="philanthropy" name="checkIssues" >
+                        <label for="philanthropy" class="radio">Philanthropy</label>
+
+                        <input type="radio" value="Investing" id="Investing" name="checkIssues" >
+                        <label for="Investing" class="radio">Impact Investing</label>
+
+                        <input type="radio" value="Entrepreneurship" id="Entrepreneurship" name="checkIssues" >
+                        <label for="Entrepreneurship" class="radio">Social Entrepreneurship</label>
+
+                        <input type="radio" value="consulting" id="consulting" name="checkIssues" >
+                        <label for="consulting" class="radio">SI Consulting</label>
+
+                        <input type="radio" value="nonprofit" id="nonprofit" name="checkIssues" >
+                        <label for="nonprofit" class="radio">Nonprofit Leadership</label>
+                        
+                        <input type="radio" value="" id="any1" name="checkIssues" >
+                        <label for="any1" class="radio">Any</label>
+
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-size:18px; padding: 5px;vertical-align:top" align=right>What best describes you?</td>
+                <td>
+                    <div class="radio-toolbar" align=left>
+                        <input type="radio" value="explorer" id="explorer" name="checkInterest" >
+                        <label for="explorer" class="radio">Explorer</label>
+                        <input type="radio" value="switcher" id="switcher" name="checkInterest" >
+                        <label for="switcher" class="radio">Switcher</label>
+                        <input type="radio" value="accelerator" id="accelerator" name="checkInterest" >
+                        <label for="accelerator" class="radio">Accelerator</label>
+                        <input type="radio" value="socialEntrepreneur" id="socialEntrepreneur" name="checkInterest" >
+                        <label for="socialEntrepreneur" class="radio">Social Entrepreneur</label>
+                        <input type="radio" value="" id="any" name="checkInterest" >
+                        <label for="any" class="radio">Any</label>
+                    </div>
+
+
+                </td>
+            </tr>
+            <tr>
+                <td align=right style="font-size:18px;  padding: 5px;vertical-align:top">What program are you in?</td>
+                <td>
+                    <div class="radio-toolbar" align=left>
+                        <input type="radio" value="MsX" id="MsX" name="checkYear" >
+                        <label for="MsX" class="radio">MsX</label>
+                        <input type="radio" value="MBA1" id="MBA1" name="checkYear" >
+                        <label for="MBA1" class="radio">MBA1</label>
+                        <input type="radio" value="MBA2" id="MBA2" name="checkYear" >
+                        <label for="MBA2" class="radio">MBA2</label>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td></td>
+                <td>
+                    <button class="btn" id="submitQuery" align=left type="button">Search </button>
+                </td>
+            </tr>
+        </table>
+        <hr style="height:2pt; visibility:hidden;">
+
+        <table style="width:49%;float: left;font-family:Arial, sans-serif;font-size:14px;padding:5px 5px;border-style:solid;border-width:5px;border-color:#A32924;border-collapse:separate;background-color: white;">
+            <tr>
+                <td colspan=2 align=center style="font-size:18px; ">Any keyword
+                    <input id="searchKeyBlank" name="searchKeyBlank" type="text" >
+                    <button class="btn" id="searchKey" type="button">Search </button>
+                </td>
+            </tr>
+        </table>
+        <table style="width:49%;float: right;font-family:Arial, sans-serif;font-size:14px;padding:5px 5px;border-style:solid;border-width:5px;border-color:#A32924;border-collapse:separate;background-color: white;">
+
+            <tr>
+                <td colspan=2 align=center style="font-size:18px; "> Any organization
+                    <input id="searchOrgBlank" name="searchOrgBlank" type="text" >
+                    <button class="btn" id="searchOrg" align=center type="button">Search </button>
+                </td>
+            </tr>
+
+
+        </table>
+        <br>
+        <br>
+
+    </div>
+    <br>
+    <br>
+
+
+    <div class="containerResults" width="800px">
+
+        <ul class="tabs">
+            <li class="tab-link current" data-tab="Staff">Staff</li>
+            <li class="tab-link" data-tab="Peer">Peers</li>
+            <li class="tab-link" data-tab="Course">Academics</li>
+            <li class="tab-link" data-tab="Experience">Activities and Experiences</li>
+
+        </ul>
+        <div id="Staff" class="tab-content current flat-table" align=center>
+        </div>
+        <div id="Peer" class="tab-content flat-table" align=center>
+        </div>
+        <div id="Course" class="tab-content flat-table" align=center>
+        </div>
+        <div id="Experience" class="tab-content flat-table" align=center>
+        </div>
+
+
+    </div>
+    <!-- container -->
+
+
+
+
+</body>
+
+</html>
+
+<!--css stylesheet-->
+<style type="text/css">
+    @import url(http://fonts.googleapis.com/css?family=Cabin:700);
+    h1 {
+        color: #A32924;
+        font-family: 'Lato', sans-serif;
+        font-size: 30px;
+        font-weight: 300;
+        line-height: 30px;
+        margin: 5px 0 10px;
+        text-align: left;
+    }
+    h2 {
+        color: black;
+        font-family: 'Source Sans Pros', sans-serif;
+        font-size: 30px;
+        font-size: 2vw;
+        font-weight: 300;
+        line-height: 50px;
+        margin: 5px 0 0px;
+        vertical-align: middle;
+    }
+    h3 {
+        color: black;
+        font-family: 'Lato', sans-serif;
+        font-size: 30px;
+        font-size: 1.25vw;
+        font-weight: 300;
+        line-height: 30px;
+        vertical-align: middle;
+    }
+    h4 {
+        color: black;
+        font-family: 'Lato', sans-serif;
+        font-size: 16px;
+        font-weight: 300;
+        line-height: 30px;
+        margin: 0px 0 0px;
+        vertical-align: middle;
+        text-align: center;
+
+    }
+    table {
+        font-size: 12px;
+        border-collapse: separate;
+        border-spacing: 0 5px;
+        vertical-align: middle;
+    }
+    .alignleft {
+        float: left;
+    }
+    .alignright {
+        float: right;
+    }
+    body {
+        font-family: 'Lato', sans-serif;
+        line-height: 1.6
+    }
+    .container {
+        width: 80%;
+        margin: 0 auto;
+    }
+    .containerResults {
+        width: 75%;
+        margin: 0 auto;
+    }
+    ul.tabs {
+        margin: 0px;
+        padding: 0px;
+        list-style: none;
+        text-align: center;
+        font-size: 24px;
+    }
+    ul.tabs li {
+        background: none;
+        color: #000;
+        display: inline-block;
+        padding: 10px 15px;
+        cursor: pointer;
+    }
+    ul.tabs li.current {
+        background: #ededed;
+        color: #000;
+    }
+    .tab-content {
+        display: none;
+        background: #ededed;
+        padding: 15px;
+    }
+    .tab-content.current {
+        display: inherit;
+    }
+    .tab-content.current {
+        display: inherit;
+    }
+    .flat-table {
+        font-family: 'Lato', Calibri, Arial, sans-serif;
+    }
+    .flat-table th,
+    .flat-table td {
+        box-shadow: inset 0 -1px rgba(0, 0, 0, 0.75), inset 0 0px rgba(0, 0, 0, 0.75);
+    }
+    .flat-table th {
+        font-weight: normal;
+        -webkit-font-smoothing: antialiased;
+        padding: 1em;
+        color: rgba(0, 0, 0, 0.45);
+        text-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
+        font-size: 14px;
+    }
+    .flat-table td {
+        color: black;
+        padding: 0.7em 1em 0.7em 1.15em;
+        text-shadow: 0 0 1px rgba(255, 255, 255, 0.1);
+        font-size: 14px;
+    }
+    .flat-table tr {
+        -webkit-transition: background 0.3s, box-shadow 0.3s;
+        -moz-transition: background 0.3s, box-shadow 0.3s;
+        transition: background 0.3s, box-shadow 0.3s;
+    }
+    .flat-table tr:hover {
+        background: rgba(0, 0, 0, 0.1);
+    }
+    .btn {
+        border-radius: 30px;
+        border: 3px solid #fff;
+        color: #A32924;
+        height: 40px;
+        width: 100px;
+        overflow: hidden;
+        font-size: 19px;
+    }
+    .btn:active {
+        border-color: #A32924;
+        color: #A32924;
+    }
+    .btn:hover {
+        background: #A32924;
+        color: #fff;
+    }
+    .btn:before {
+        position: absolute;
+        line-height: 10;
+        color: #fff;
+    }
+    .btn:active:before {
+        color: #17954c;
+    }
+    .radio-toolbar input[type="radio"] {
+        display: none;
+    }
+    .radio-toolbar label {
+        display: inline-block;
+        background-color: #ddd;
+        padding: 6px 11px;
+        font-family: Arial;
+        font-size: 12px;
+        margin: 2px 2px 2px 2px;
+    }
+    .radio-toolbar input[type="radio"]:checked + label {
+        background-color: #980202;
+        color: white;
+    }
+    a1 {
+        display: inline-block;
+        float: left;
+        margin-right: 10px;
+        border: 5px solid rgba(0, 0, 0, 0);
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+    a1:hover {
+        border: 5px solid #ffffff;
+        border-radius: 15px;
+        box-shadow: 0 15px 15px -10px rgba(0, 0, 0, 0.5);
+        background-color: #555555;
+    }
+</style>
